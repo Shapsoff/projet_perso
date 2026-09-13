@@ -288,6 +288,13 @@ class EHSBot:
         self.config = config or EHSBotConfig()
         self.name   = "EHSBot_v4"
 
+        # Diagnostics de la dernière décision (outillage validation phase 6) —
+        # None tant que decide() n'a pas encore été appelé.
+        self.last_ehs      = None
+        self.last_ppot     = None
+        self.last_street   = None
+        self.last_decision = None
+
         if _POKER_ENGINE_AVAILABLE:
             # seed=0 == "aléatoire" côté C++ (voir bindings.cpp) -> NE JAMAIS
             # utiliser 0 ici si on veut des runs reproductibles.
@@ -447,6 +454,16 @@ class EHSBot:
         ehs_result = self._compute_ehs(hand, board, n_opponents)
         ehs        = ehs_result['EHS']
 
+        # Correctif (outillage validation phase 6) : expose les diagnostics de
+        # décision (EHS, décision Best-Response complète si dispo) sur
+        # l'instance, en plus du retour Action habituel -- inchangé sinon.
+        # Sert aux scripts d'analyse externes (ex. nouveau validate_phase6.py)
+        # pour inspecter comment le bot a raisonné sans dupliquer sa logique.
+        self.last_ehs      = ehs
+        self.last_ppot     = ehs_result.get('PPot', 0.0)
+        self.last_street   = street
+        self.last_decision = None   # reste None si chemin v3 (pas de BR)
+
         # ── Dimension 2 : Action History Bucket ───────────────────────────────
         bucket_modifier  = 0.0
         aggregate_bucket = ActionBucket.NO_ACTION
@@ -545,6 +562,7 @@ class EHSBot:
                 self.name, hand, board, street, ehs, spr_info.spr, action
             )
             logger.debug("[%s] BR: %s", self.name, decision.summary())
+            self.last_decision = decision
             return action
 
         # ── Décision v3 (fallback) ────────────────────────────────────────────

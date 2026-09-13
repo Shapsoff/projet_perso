@@ -3,3 +3,6 @@ data/
 engine/build/
 reports/
 *.log
+templates/
+templates_raw/
+templates_review/
